@@ -1,36 +1,55 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Financial Data Dashboard
+
+A full-stack Next.js application for uploading financial CSVs, validating transactions, and visualizing analytics.
+
+## Features
+
+- **CSV Upload**: Drag-and-drop interface with strict row-level validation (Zod).
+- **Atomic Processing**: Database updates are transactional—entire file invalidates if one row fails.
+- **Interactive Dashboard**:
+    - Monthly Spending Trends (Line Chart)
+    - Age Group Distribution (Bar Chart)
+    - Gender Demographics (Pie Chart)
+    - Top Spenders List
+    - Activity Heatmap (Day of Week)
+- **Paginated Data Table**: Searchable and paginated view of all transactions.
+- **Tech Stack**: Next.js 15 (App Router), TypeScript, Tailwind CSS, Prisma, PostgreSQL, Recharts.
 
 ## Getting Started
 
-First, run the development server:
+1. **Prerequisites**: Node.js 18+ and PostgreSQL.
+2. **Installation**:
+   ```bash
+   npm install
+   ```
+3. **Database Setup**:
+   Create a `.env` file with your PostgreSQL connection string:
+   ```env
+   DATABASE_URL="postgresql://user:password@localhost:5432/financial_db?schema=public"
+   ```
+4. **Initialize DB**:
+   ```bash
+   npx prisma db push
+   ```
+5. **Run Development Server**:
+   ```bash
+   npm run dev
+   ```
+   Open [http://localhost:3000](http://localhost:3000) to upload a CSV.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## CSV Format
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The upload expects a CSV with the following headers (case-insensitive keys mapped automatically if standard):
+- `transaction_no` (Unique)
+- `date` (ISO date)
+- `full_name`
+- `age` (18-90)
+- `gender` (Male, Female, Other)
+- `amount` (Numeric)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Architecture
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Backend**: Next.js Route Handlers (`/api/upload`, `/api/analytics/*`).
+- **Validation**: Schema-first validation using `zod`.
+- **Database**: Prisma ORM with atomic transactions (`$transaction`).
+- **Frontend**: React Server/Client Components, Tailwind, Recharts.

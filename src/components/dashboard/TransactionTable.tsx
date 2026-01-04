@@ -24,6 +24,7 @@ interface TransactionResponse {
     total: number;
     page: number;
     limit: number;
+    type: 'ALL' | 'INCOME' | 'EXPENSE';
   };
 }
 
@@ -31,15 +32,18 @@ async function fetchTransactions({
   page,
   limit,
   search,
+  type
 }: {
   page: number;
   limit: number;
   search: string;
+  type: 'ALL' | 'INCOME' | 'EXPENSE';
 }): Promise<TransactionResponse> {
   const params = new URLSearchParams({
     page: page.toString(),
     limit: limit.toString(),
     search,
+    type,
   });
 
   const res = await fetch(`/api/transactions?${params}`);
@@ -53,6 +57,7 @@ export const TransactionTable = () => {
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
   const [search, setSearch] = useState("");
+  const [type, setType] = useState<'ALL' | 'INCOME' | 'EXPENSE'>('ALL');
 
   const debouncedSearch = useDebounce(search, 500);
 
@@ -61,8 +66,8 @@ export const TransactionTable = () => {
   }, [debouncedSearch]);
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["transactions", { page, limit, search: debouncedSearch }],
-    queryFn: () => fetchTransactions({ page, limit, search: debouncedSearch }),
+    queryKey: ["transactions", { page, limit, search: debouncedSearch, type }],
+    queryFn: () => fetchTransactions({ page, limit, search: debouncedSearch, type }),
     placeholderData: keepPreviousData,
   });
 
@@ -85,6 +90,41 @@ export const TransactionTable = () => {
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
           />
+        </div>
+        <div>
+          <button
+            onClick={() => setType("ALL")}
+            className={cn(
+              "px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer",
+              type === "ALL"
+                ? "bg-indigo-50 text-indigo-600"
+                : "text-indigo-600 hover:bg-indigo-50"
+            )}
+          >
+            All
+          </button>
+          <button
+            onClick={() => setType("INCOME")}
+            className={cn(
+              "px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer",
+              type === "INCOME"
+                ? "bg-indigo-50 text-indigo-600"
+                : "text-indigo-600 hover:bg-indigo-50"
+            )}
+          >
+            Income
+          </button>
+          <button
+            onClick={() => setType("EXPENSE")}
+            className={cn(
+              "px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer",
+              type === "EXPENSE"
+                ? "bg-indigo-50 text-indigo-600"
+                : "text-indigo-600 hover:bg-indigo-50"
+            )}
+          >
+            Expense
+          </button>
         </div>
       </div>
 

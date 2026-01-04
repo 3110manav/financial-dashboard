@@ -6,9 +6,7 @@ import { z } from "zod";
 // Schema for row validation
 const transactionSchema = z.object({
   transaction_no: z.string().min(1, "Transaction number is required"),
-  date: z.string().refine((val) => !isNaN(Date.parse(val)), {
-    message: "Invalid date format",
-  }),
+  date: z.coerce.date({ message: "Invalid date" }),
   full_name: z.string().min(1, "Full name is required"),
   age: z.coerce
     .number()
@@ -63,7 +61,7 @@ export async function POST(req: NextRequest) {
       const row: any = rows[i];
       const rowNum = i + 2;
 
-      // Check internal duplicates
+      // Check internal duplicates within the file
       if (row.transaction_no && seenTransactionNos.has(row.transaction_no)) {
         errors.push(
           `Row ${rowNum}: Duplicate transaction_no '${row.transaction_no}' in file`
@@ -83,6 +81,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // 1. Fail fast if there are validation errors
     if (errors.length > 0) {
       return NextResponse.json(
         { error: "Validation Failed", details: errors },
@@ -90,27 +89,46 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Atomic Insert
-    const insertedCount = await prisma.$transaction(async (tx) => {
-      // Map validRows to DB format
-      const dbRows = validRows.map((row) => ({
-        transaction_no: row.transaction_no,
-        date: new Date(row.date),
-        full_name: row.full_name,
-        age: row.age,
-        gender: row.gender,
-        amount: row.amount,
-      }));
+    // 2. Process rows (Upsert: Create or Update)
+    // We treating all valid rows as equals, checking for database existence is handled by upsert automatically.
 
-      const result = await tx.transaction.createMany({
-        data: dbRows,
-      });
-      return result.count;
-    });
+    let processedCount = 0;
+    const BATCH_SIZE = 50; // Smaller batch size for upserts
+
+    for (let i = 0; i < validRows.length; i += BATCH_SIZE) {
+      const batch = validRows.slice(i, i + BATCH_SIZE);
+
+      await prisma.$transaction(
+        batch.map((row) =>
+          prisma.transaction.upsert({
+            where: { transaction_no: row.transaction_no },
+            update: {
+              date: row.date,
+              full_name: row.full_name,
+              age: row.age,
+              gender: row.gender,
+              amount: row.amount,
+            },
+            create: {
+              transaction_no: row.transaction_no,
+              date: row.date,
+              full_name: row.full_name,
+              age: row.age,
+              gender: row.gender,
+              amount: row.amount,
+            },
+          })
+        )
+      );
+      processedCount += batch.length;
+    }
 
     return NextResponse.json({
       message: "Data processed successfully",
-      count: insertedCount,
+      processed: processedCount,
+      inserted: processedCount, // Keeping for backward compatibility if FE uses it, though technically it's upserted
+      rejected: 0,
+      rejected_details: [],
     });
   } catch (error: any) {
     if (error.code === "P2002") {

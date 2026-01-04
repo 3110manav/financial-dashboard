@@ -1,5 +1,4 @@
-import { DashboardCharts } from "@/components/dashboard/DashboardCharts";
-import { TransactionTable } from "@/components/dashboard/TransactionTable";
+import { DashboardCharts, TransactionTable } from "@/components";
 import { LayoutDashboard } from "lucide-react";
 
 export default function DashboardPage() {
